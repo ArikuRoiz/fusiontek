@@ -22,7 +22,7 @@ const routes  = require('./routes');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '64kb' }));
 
 // CORS — allow the frontend dev server on any localhost port
 app.use((_req, res, next) => {
