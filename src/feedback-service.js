@@ -48,7 +48,17 @@ function submit(content) {
     updated_at:   now,
   };
 
-  db.insert(feedback);
+  try {
+    db.insert(feedback);
+  } catch (err) {
+    // UNIQUE constraint: two identical requests raced past the findByHash check.
+    // Treat it as a duplicate — fetch the winner and return it.
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || err.message?.includes('UNIQUE')) {
+      const race = db.findByHash(hash);
+      return { duplicate: true, feedback: formatFeedback(race) };
+    }
+    throw err;
+  }
 
   // Kick off async analysis — does NOT block the response
   setImmediate(() => queue.enqueue(feedback.id, feedback.content));

@@ -66,23 +66,23 @@ function findById(id) {
 
 function listAll({ limit = 50, offset = 0, status } = {}) {
   if (status) {
-    return getDb().prepare(`
+    return stmt('listByStatus', `
       SELECT * FROM feedback WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?
     `).all(status, limit, offset);
   }
-  return getDb().prepare(`
+  return stmt('listAll', `
     SELECT * FROM feedback ORDER BY created_at DESC LIMIT ? OFFSET ?
   `).all(limit, offset);
 }
 
 function updateStatus(id, status) {
-  return getDb().prepare(`
+  return stmt('updateStatus', `
     UPDATE feedback SET status = ?, updated_at = ? WHERE id = ?
   `).run(status, new Date().toISOString(), id);
 }
 
 function updateAnalysis(id, { status, raw_ai_response, analysis }) {
-  return getDb().prepare(`
+  return stmt('updateAnalysis', `
     UPDATE feedback
     SET status = ?, raw_ai_response = ?, analysis = ?, updated_at = ?
     WHERE id = ?
@@ -90,7 +90,12 @@ function updateAnalysis(id, { status, raw_ai_response, analysis }) {
 }
 
 function closeDb() {
-  if (db) { db.close(); db = null; }
+  if (db) {
+    db.close();
+    db = null;
+    // Clear cached statements — they are bound to the closed db instance
+    Object.keys(stmts).forEach(k => delete stmts[k]);
+  }
 }
 
 module.exports = {
