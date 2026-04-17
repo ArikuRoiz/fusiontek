@@ -122,18 +122,21 @@ async function callGemini(content) {
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
   const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ parts: [{ text: truncate(content) }] }],
-        generationConfig: { temperature: 0.1 },
-      }),
-    }
-  );
+  // Key passed as header instead of URL param to keep it out of logs
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ parts: [{ text: truncate(content) }] }],
+      generationConfig: { temperature: 0.1 },
+    }),
+  });
 
   if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${await res.text().catch(() => '')}`);
   const data = await res.json();
@@ -160,8 +163,13 @@ function getProvider() {
 async function analyse(content) {
   const call = getProvider();
   const raw  = await call(content);
-  const analysis = parseAndValidate(raw);
-  return { raw, analysis };
+  try {
+    const analysis = parseAndValidate(raw);
+    return { raw, analysis };
+  } catch (err) {
+    err.raw = raw;
+    throw err;
+  }
 }
 
 module.exports = { analyse, parseAndValidate };

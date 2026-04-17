@@ -45,10 +45,9 @@ async function process({ id, content }) {
     });
   } catch (err) {
     console.error(`[queue] analysis failed for ${id}:`, err.message);
-
     db.updateAnalysis(id, {
       status:          'FAILED',
-      raw_ai_response: err.message,
+      raw_ai_response: err.raw ?? err.message,
       analysis:        null,
     });
   }
