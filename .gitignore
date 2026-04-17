@@ -2,3 +2,7 @@ node_modules/
 *.db
 *.db-journal
 .env
+
+:memory:
+*.db-shm
+*.db-wal
